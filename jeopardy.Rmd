@@ -1,0 +1,169 @@
+---
+title: "Jeopardy"
+output: html_notebook
+---
+
+load resources
+
+```{r}
+library(readr)
+library(stringr)
+library(dplyr)
+library(tidyr)
+```
+Read the dataset into a tibble called jeopardy using tidyverse
+
+```{r}
+original <- read_csv("JEOPARDY_CSV.csv")
+```
+Print out the first 5 rows of jeopardy
+Print out the columns of the jeopardy data
+Replace the spaces with underscores for each column and
+lowercase all of the column names
+
+
+```{r}
+head(original)
+print(colnames(original))
+colnames(original) <- str_replace_all(colnames(original), " ", "_")
+colnames(original) <- tolower(colnames(original))
+print(colnames(original))
+typeof(original$show_number)
+class(original$show_number)
+typeof(original[,1])
+class(original[,1])
+
+class(original$value)
+typeof(original$value)
+```
+
+remove the rows when the value column is "None"
+remove the "$" and ",", then convert the value column to be numeric
+
+```{r}
+data <- original %>%
+  filter(value != "None") 
+
+#table(data$value)
+#can't simply replace $ with ""
+data <- data %>%
+  mutate(value = str_replace_all(string = value, pattern = "[\\$\\,]", replacement = "")) %>% 
+  mutate(value = as.numeric(value))
+
+#class(data$value)
+
+```
+normalize the question, answer, and category columns
+
+Lowercase all of the words of every question and answer
+
+Remove all punctuation. Keep all letters and numbers.What about spaces?
+
+```{r}
+data <- data %>%
+  mutate(category = tolower(category), question = tolower(question), answer = tolower(answer)) %>%
+  mutate(category = str_replace_all(category,"[^a-z0-9\\s]",""), question = str_replace_all(question,"[^a-z0-9\\s]",""), answer = str_replace_all(answer,"[^a-z0-9\\s]",""))
+```
+
+Take the air_date column and split it into 3 new columns: year, month and day.
+the separate() function can serve you well here
+Convert each of these new columns into numeric columns as well
+```{r}
+data <- data %>%
+  separate(air_date, c("year","month","day"), "-") 
+
+data <- data %>%
+  mutate(year = as.numeric(year), month = as.numeric(month), day = as.numeric(day))
+```
+For each of the three categories we discussed (science, history, Shakespeare), conduct a hypothesis test to see if they are more likely to appear than other categories. YES
+```{r}
+
+science <- 0
+science_non <- 0
+for (category in data$category) {
+  if (str_detect(category,"science")) {
+    science <- science + 1
+  }
+  else {
+    science_non <- science_non + 1
+  }
+}
+
+n_questions <- nrow(data)
+p_category_expected <-   1/3369 
+p_not_category_expected <- 3368/3369 
+p_expected <- c(p_category_expected, p_not_category_expected)
+p_observed <- c(science/n_questions, science_non/n_questions)
+chisq.test(p_observed, p = p_expected, simulate.p.value = TRUE) #significant!
+#the manual way
+#chisq = (p_observed[1] - p_expected[1])**2/p_expected[1] + (p_observed[2] - p_expected[2])**2/p_expected[2]
+
+history <- 0
+history_non <- 0
+for (category in data$category) {
+  if (str_detect(category,"history")) {
+    history <- history + 1
+  }
+  else {
+    history_non <- history_non + 1
+  }
+}
+
+n_questions <- nrow(data)
+p_category_expected <-   1/3369 
+p_not_category_expected <- 3368/3369 
+p_expected <- c(p_category_expected, p_not_category_expected)
+p_observed <- c(history/n_questions, history_non/n_questions)
+chisq.test(p_observed, p = p_expected, simulate.p.value = TRUE) #significant!
+
+shakespeare <- 0
+shakespeare_non <- 0
+for (category in data$category) {
+  if (str_detect(category,"shakespeare")) {
+    shakespeare <- shakespeare + 1
+  }
+  else {
+    shakespeare_non <- shakespeare_non + 1
+  }
+}
+
+n_questions <- nrow(data)
+p_category_expected <-   1/3369 
+p_not_category_expected <- 3368/3369 
+p_expected <- c(p_category_expected, p_not_category_expected)
+p_observed <- c(shakespeare/n_questions, shakespeare_non/n_questions)
+chisq.test(p_observed, p = p_expected, simulate.p.value = TRUE) #significant!
+
+```
+
+how often new questions are repeats of older ones?
+
+1. sort by accending air_date
+2. Intialize an empty vector to store all the unique terms that are in the Jeopardy questions.
+3. For each row, split the value for question into distinct words words, remove any word shorter than 6 characters, and check if each word occurs in terms_used
+```{r}
+data %>%
+  arrange(year, month, day)
+terms_used <- ""
+for (i in c(1:nrow(data))) {
+  if (i %% 10000 ==0) {print(i)}
+  question <- data$question[i]
+  words <- str_split(question," ", simplify = TRUE)
+  for (word in words) {
+    if (nchar(word) >=6 & !word %in% terms_used) {
+            terms_used <- c(terms_used, word) 
+    } 
+  }
+}
+```
+Find the value associated with each term
+```{r}
+for (term in terms_used) {
+  for (question in data$question) {
+    if (term %in% question) {
+      ifelse()
+    }
+  }
+}
+```
+
